@@ -137,6 +137,13 @@ logging:
     json:
       customizer: io.github.kaulinmindiola.warden.shared.logging.RedactingJsonMembersCustomizer
 
+# The OpenAPI document (REQ-MAINT-008) is written with sorted keys and indented, so the versioned
+# copy in docs/api/openapi.json has a stable, reviewable diff. It is served to authenticated
+# callers only; there is no Swagger UI.
+springdoc:
+  writer-with-order-by-keys: true
+  writer-with-default-pretty-printer: true
+
 # Actuator runs on a separate port that is never published outside the deployment network.
 # Readiness depends on PostgreSQL and on the application accepting traffic, never on Redis, whose
 # failure is degraded (REQ-AVAIL-001, SDD V17). Liveness reports only the application state.
