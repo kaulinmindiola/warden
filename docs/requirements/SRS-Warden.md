@@ -1,10 +1,10 @@
 # Software Requirements Specification
 ## For Warden — Workspace Identity, Access & Notification Platform
 
-Version 0.1
+Version 0.2
 Prepared by Kaulin Mindiola  
 Personal professional portfolio project  
-2026-10-22
+2026-11-02
 
 ## Table of Contents
 <!-- TOC -->
@@ -37,6 +37,7 @@ Personal professional portfolio project
 | Name            | Date       | Reason For Changes                                                                                                                                                                                              | Version |
 |-----------------|------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
 | Kaulin Mindiola | 2026-10-20 | Initial version: requirements baseline derived from the discovery process.                                                                                                                 | 0.1     |
+| Kaulin Mindiola | 2026-11-02 | Release 1.0 scope: REQ-FUNC-010, 053 and 054, REQ-PERF-001 to 005, REQ-MAINT-005 and REQ-COMP-003, the statistical analysis of REQ-SEC-010 and the template-change action of REQ-SEC-015 move to release 1.1. Their status in the Section 4 matrix is `1.1`, which marks a requirement, or the part named in its evidence, deferred to that release. No requirement ID, statement or acceptance criterion changes. | 0.2 |
 
 ## 1. Introduction
 
@@ -1583,7 +1584,7 @@ N/A — Warden does not incorporate machine learning models or data-driven compo
 | REQ-FUNC-007 | Test | [ResendVerificationIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/ResendVerificationIT.java) | Passed | Resend invalidates the previous link and the new one verifies; 409 when already verified; the 4th resend within one hour gets 429 with `Retry-After` (IamRateLimitIT) |
 | REQ-FUNC-008 | Test | [LoginIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/LoginIT.java) | Passed | 200 with both tokens; two logins create two distinct sessions listed by REQ-FUNC-016; an unverified e-mail can log in |
 | REQ-FUNC-009 | Test | [LoginIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/LoginIT.java) | Passed | Unknown e-mail and wrong password get an identical 401; the unknown e-mail is verified against a dummy Argon2 hash (ADR-019) |
-| REQ-FUNC-010 | Test | TBD | Pending | — |
+| REQ-FUNC-010 | Test | — | 1.1 | Deferred to release 1.1 (Revision History 0.2): release 1.0 has no new-device notice and no preference for it |
 | REQ-FUNC-011 | Test | [RefreshIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/RefreshIT.java) | Passed | A new refresh token in the same `sid`; the presented token is marked used |
 | REQ-FUNC-012 | Test | [RefreshReuseAndExpiryIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/RefreshReuseAndExpiryIT.java) | Passed | Reuse revokes the session: the rotated refresh token and every access token get 401, with exactly one reuse event and one audit record; the session holder gets a security delivery (NotificationCriteriaIT, D-03 re-verified) |
 | REQ-FUNC-013 | Test | [ConcurrentRefreshIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/ConcurrentRefreshIT.java) | Passed | 50 repetitions of 4 concurrent HTTP refreshes: exactly one 200 each time and the session revoked; see ADR-006 |
@@ -1626,8 +1627,8 @@ N/A — Warden does not incorporate machine learning models or data-driven compo
 | REQ-FUNC-050 | Test | [NotificationPreferencesIT](../../src/test/java/io/github/kaulinmindiola/warden/notification/web/NotificationPreferencesIT.java) | Passed | workspace.role-changed off in W creates no delivery in W and still does in X; informational notices are on by default (NotificationFanoutIT) |
 | REQ-FUNC-051 | Test | [NotificationFanoutIT](../../src/test/java/io/github/kaulinmindiola/warden/notification/application/NotificationFanoutIT.java) | Passed | Locale from the user setting, else the event, else es; a changed locale applies to the next deliveries and fr answers 400 (NotificationPreferencesIT) |
 | REQ-FUNC-052 | Test | [TemplateResolverIT](../../src/test/java/io/github/kaulinmindiola/warden/notification/application/TemplateResolverIT.java) | Passed | Reduced resolution for release 1.0 (D-01): global template for (key, locale), else for (key, es); every seeded template validates |
-| REQ-FUNC-053 | Test | TBD | Pending | — |
-| REQ-FUNC-054 | Test | TBD | Pending | — |
+| REQ-FUNC-053 | Test | — | 1.1 | Deferred to release 1.1 (Revision History 0.2): workspace template customization. Release 1.0 ships read-only global templates in `es` and `en`, version 1 (REQ-FUNC-052) |
+| REQ-FUNC-054 | Test | — | 1.1 | Deferred to release 1.1 (Revision History 0.2): template versions beyond version 1, together with REQ-FUNC-053 |
 | REQ-FUNC-055 | Test | [ProviderFailoverTest](../../src/test/java/io/github/kaulinmindiola/warden/notification/application/ProviderFailoverTest.java) | Passed | A primary answering 500 over HTTP fails over to the secondary in the first attempt; with the primary breaker open the primary gets no calls; the delivery records the provider used (DeliveryWorkerIT) |
 | REQ-FUNC-056 | Test | [DeliveryWorkerIT](../../src/test/java/io/github/kaulinmindiola/warden/notification/application/worker/DeliveryWorkerIT.java) | Passed | A recipient rejected as invalid ends DEAD after 1 attempt with PERMANENT_REJECTION and no call to the secondary |
 | REQ-FUNC-057 | Test | [DeliveryWorkerIT](../../src/test/java/io/github/kaulinmindiola/warden/notification/application/worker/DeliveryWorkerIT.java) | Passed | With both providers failing, 5 attempts and then DEAD with TRANSIENT_FAILURE; the delivery keeps its token for a manual retry |
@@ -1637,11 +1638,11 @@ N/A — Warden does not incorporate machine learning models or data-driven compo
 | REQ-FUNC-061 | Test | [NotificationFanoutIT](../../src/test/java/io/github/kaulinmindiola/warden/notification/application/NotificationFanoutIT.java) | Passed | The same event handed over 3 times gives exactly one delivery per recipient |
 | REQ-FUNC-062 | Test | [DeliveryCancellationIT](../../src/test/java/io/github/kaulinmindiola/warden/notification/application/DeliveryCancellationIT.java) | Passed | Revoked or replaced invitations and deleted workspaces cancel their unsent deliveries and drop the tokens; with the provider down, a delivery revoked in flight stays CANCELLED (DeliveryWorkerIT) |
 | REQ-FUNC-063 | Test | [OutboxRetentionIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/outbox/OutboxRetentionIT.java) | Passed | With the test clock, an event published 7 d + 1 s earlier is deleted, one published 7 d - 1 s earlier is kept, and an unpublished event of 400 days is kept |
-| REQ-PERF-001 | Test | TBD | Pending | — |
-| REQ-PERF-002 | Test | TBD | Pending | — |
-| REQ-PERF-003 | Test | TBD | Pending | — |
-| REQ-PERF-004 | Test | TBD | Pending | — |
-| REQ-PERF-005 | Test | TBD | Pending | — |
+| REQ-PERF-001 | Test | — | 1.1 | Deferred to release 1.1 (Revision History 0.2): load campaign on defined hardware (TBD-02, TBD-07). Release 1.0 bounds Argon2 to 4 concurrent hashes, the connection pool and the container memory (1 GiB) |
+| REQ-PERF-002 | Test | — | 1.1 | Deferred to release 1.1 (Revision History 0.2): load campaign on defined hardware (TBD-02, TBD-07). Release 1.0 bounds Argon2 to 4 concurrent hashes, the connection pool and the container memory (1 GiB) |
+| REQ-PERF-003 | Test | — | 1.1 | Deferred to release 1.1 (Revision History 0.2): load campaign on defined hardware (TBD-02, TBD-07). Release 1.0 bounds Argon2 to 4 concurrent hashes, the connection pool and the container memory (1 GiB) |
+| REQ-PERF-004 | Test | — | 1.1 | Deferred to release 1.1 (Revision History 0.2): load campaign on defined hardware (TBD-02, TBD-07). Release 1.0 bounds Argon2 to 4 concurrent hashes, the connection pool and the container memory (1 GiB); the outbox lag is already measured (NotificationMetricsIT) |
+| REQ-PERF-005 | Test | — | 1.1 | Deferred to release 1.1 (Revision History 0.2): load campaign on defined hardware (TBD-02, TBD-07). Release 1.0 bounds Argon2 to 4 concurrent hashes, the connection pool and the container memory (1 GiB) |
 | REQ-SEC-001 | Test | [AuthenticationByDefaultIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/security/AuthenticationByDefaultIT.java) | Passed | Endpoint sweep from the handler mappings: every endpoint except the six public ones answers 401 without a token |
 | REQ-SEC-002 | Test | [AccessTokenAuthenticationIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/AccessTokenAuthenticationIT.java) | Passed | Unsigned, wrong `alg`, bad signature, wrong issuer, missing `sid` or `jti` and expired beyond 30 s all get 401 |
 | REQ-SEC-003 | Inspection | [Argon2Properties](../../src/main/java/io/github/kaulinmindiola/warden/iam/infrastructure/Argon2Properties.java) | Passed | Argon2id with 19 MiB, 2 iterations and parallelism 1 by default, configurable; LoginIT proves the rehash on the next login |
@@ -1651,12 +1652,12 @@ N/A — Warden does not incorporate machine learning models or data-driven compo
 | REQ-SEC-007 | Test | [IamRateLimitIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/IamRateLimitIT.java) | Passed | The 21st login from one IP within a minute gets 429, whatever the result |
 | REQ-SEC-008 | Test | [IamRateLimitIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/IamRateLimitIT.java) | Passed | The 4th reset request for an e-mail and the 11th from an IP within one hour get 429, also for unknown e-mails |
 | REQ-SEC-009 | Test | [IamRateLimitIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/IamRateLimitIT.java) | Passed | The 61st refresh from one IP within a minute gets 429 |
-| REQ-SEC-010 | Analysis | [ADR-019](../adr/ADR-019-response-time-equalization.md) | Partial | Mechanism in place: dummy Argon2 hash for login and a 250 ms response floor for register and forgot (ResponseFloorIT). The statistical analysis is pending |
+| REQ-SEC-010 | Analysis | [ADR-019](../adr/ADR-019-response-time-equalization.md) | 1.1 | Mechanism in place: dummy Argon2 hash for login and a 250 ms response floor for register and forgot (ResponseFloorIT). The statistical analysis and the calibration are deferred to release 1.1 (Revision History 0.2) |
 | REQ-SEC-011 | Test | [FailClosedAuthorizationIT](../../src/test/java/io/github/kaulinmindiola/warden/isolation/FailClosedAuthorizationIT.java) | Passed | On every registered workspace endpoint, an OWNER is denied when the membership query fails (503), the stored role is unknown (404 as a non-member, logged) or the workspace id cannot be resolved (404); also DependencyOutageIT with PostgreSQL down |
 | REQ-SEC-012 | Test | [NoteRowLevelSecurityIT](../../src/test/java/io/github/kaulinmindiola/warden/notes/infrastructure/NoteRowLevelSecurityIT.java) | Passed | Raw JDBC as warden_app without application filters: with the context of W no row of X is read or modified and without context nothing is visible; the same for invitations, where the token-holder context sees one row and may only accept it (InvitationRowLevelSecurityIT) |
 | REQ-SEC-013 | Test | [PlaceholderRendererTest](../../src/test/java/io/github/kaulinmindiola/warden/notification/infrastructure/PlaceholderRendererTest.java) | Passed | Placeholder-only renderer: undeclared variables and any other double-brace construct are rejected and values are inserted literally; every seeded template validates (TemplateResolverIT) |
 | REQ-SEC-014 | Test | [SecretsInResponsesIT](../../src/test/java/io/github/kaulinmindiola/warden/SecretsInResponsesIT.java) | Passed | Every read endpoint and every response of a flow that issues every kind of secret contain no password, stored hash (hex or Base64), one-time token or token they did not issue; a gate fails the build when a read endpoint is not scanned; the deliveries of the flow are rendered and sent before the reads and the delivery listing is scanned |
-| REQ-SEC-015 | Test | [AuditCompletenessIT](../../src/test/java/io/github/kaulinmindiola/warden/AuditCompletenessIT.java) | Partial | Each of the 14 existing actions, dead-letter retries included, performed through the API, produces exactly one record with time, actor, workspace, outcome and traceId and no secret. Template changes have no operation in release 1.0 |
+| REQ-SEC-015 | Test | [AuditCompletenessIT](../../src/test/java/io/github/kaulinmindiola/warden/AuditCompletenessIT.java) | 1.1 | Each of the 14 actions of release 1.0, dead-letter retries included, performed through the API, produces exactly one record with time, actor, workspace, outcome and traceId and no secret. The 15th action, a template change, has no operation until REQ-FUNC-053 in release 1.1 |
 | REQ-SEC-016 | Inspection | [AuditRetentionIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/audit/AuditRetentionIT.java) | Passed | No endpoint modifies the log and the runtime role cannot update, delete or truncate it (AuditLogIT); with the clock aligned, a record of 365 d + 1 s is purged and one of 364 d kept; no cutoff purges a younger record |
 | REQ-SEC-017 | Test | [ProblemDetailsContractIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/web/ProblemDetailsContractIT.java) | Passed | Error responses carry no stack traces, SQL, class names or exception messages (also ApiConventionsIT) |
 | REQ-SEC-018 | Test | [ApiConventionsIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/web/ApiConventionsIT.java) | Passed | A 64 KiB body is accepted and one byte more gets 413 |
@@ -1671,46 +1672,46 @@ N/A — Warden does not incorporate machine learning models or data-driven compo
 | REQ-REL-008 | Test | [RateLimitFallbackIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/ratelimit/RateLimitFallbackIT.java) | Passed | With Redis frozen and one instance the 6th failed login gets 429; the limits return to Redis once it answers |
 | REQ-REL-009 | Test | [DependencyOutageIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/web/DependencyOutageIT.java) | Passed | With PostgreSQL frozen, register, login, refresh, the session list and a workspace read get 503 with `Retry-After: 5` and none gets 2xx |
 | REQ-AVAIL-001 | Test | [DependencyOutageIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/web/DependencyOutageIT.java) | Passed | Readiness is DOWN only while PostgreSQL is down, not with Redis down; liveness stays UP |
-| REQ-AVAIL-002 | Test | TBD | Pending | — |
+| REQ-AVAIL-002 | Test | [GracefulShutdownIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/GracefulShutdownIT.java) | Passed | A request in flight when shutdown starts completes and a new one is refused; each shutdown phase may last up to 30 s; once the worker gate closes no delivery is claimed (WorkerGateTest) |
 | REQ-AVAIL-003 | Test | [DeliveryResilienceIT](../../src/test/java/io/github/kaulinmindiola/warden/notification/application/worker/DeliveryResilienceIT.java) | Passed | A delivery left RETRYING is sent by an application instance started afterwards; after a lapsed lease another run claims the delivery again |
-| REQ-OBS-001 | Test | TBD | Pending | — |
-| REQ-OBS-002 | Test | TBD | Pending | — |
-| REQ-OBS-003 | Test | TBD | Pending | — |
-| REQ-OBS-004 | Test | TBD | Pending | — |
-| REQ-OBS-005 | Test | TBD | Pending | — |
-| REQ-OBS-006 | Demonstration | TBD | Pending | — |
-| REQ-OBS-007 | Demonstration | TBD | Pending | — |
-| REQ-OBS-008 | Demonstration | TBD | Pending | — |
-| REQ-COMP-001 | Test | TBD | Pending | — |
-| REQ-COMP-002 | Test | TBD | Pending | — |
-| REQ-COMP-003 | Inspection | TBD | Pending | — |
+| REQ-OBS-001 | Test | [AccessMetricsIT](../../src/test/java/io/github/kaulinmindiola/warden/AccessMetricsIT.java) | Passed | The management port exposes successful and failed logins, refreshes and detected reuses, revoked sessions by cause, rate-limit rejections by policy and authorization denials by status (WorkspaceAuthorizationMetricsTest) |
+| REQ-OBS-002 | Test | [NotificationMetricsIT](../../src/test/java/io/github/kaulinmindiola/warden/notification/application/worker/NotificationMetricsIT.java) | Passed | Deliveries by status and scope, including the dead-letter queue of each scope, pending events and outbox lag; attempts, latency and result per provider and the breaker state of each provider (ProviderMetricsTest) |
+| REQ-OBS-003 | Test | [TelemetryScanIT](../../src/test/java/io/github/kaulinmindiola/warden/TelemetryScanIT.java) | Passed | FF-09: after a flow that issues every kind of secret, no metric label holds a user, workspace or session id, an e-mail address or an IP address |
+| REQ-OBS-004 | Test | [StructuredLogsIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/logging/StructuredLogsIT.java) | Passed | Every line of an authenticated workspace request is JSON with timestamp, level, `traceId`, `userId` and `workspaceId` (LogContextFilterTest) |
+| REQ-OBS-005 | Test | [TelemetryScanIT](../../src/test/java/io/github/kaulinmindiola/warden/TelemetryScanIT.java) | Passed | FF-09: no password, token, hash, link with a token, `Authorization` header or e-mail address reaches the logs or the metrics; tokens, JWTs and e-mail addresses are masked in messages, MDC values and stack traces (StructuredLogsIT, LogRedactorTest) |
+| REQ-OBS-006 | Demonstration | [StructuredLogsIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/logging/StructuredLogsIT.java) | Passed | The `traceId` of an inviting request finds the publication of its event and the delivery attempt through `originTraceId`; procedure in [log correlation](../operations/log-correlation.md) |
+| REQ-OBS-007 | Demonstration | [Grafana dashboard](../../ops/grafana/dashboards/warden-access-delivery.json) | Passed | Provisioned with its Prometheus data source when the reference environment starts; it showed access and delivery data after the Bruno collection ran, with no manual step. The load test of the acceptance criterion moves to release 1.1 with REQ-PERF-001 to 005 |
+| REQ-OBS-008 | Demonstration | [Alert rules](../../ops/prometheus/alerts.yml) | Passed | Breaker open for 5 min, dead-letter queue growth, outbox lag p95 above 5 s for 5 min, more than 10 reuses in 5 min and readiness not satisfied; `promtool test rules` with [alerts.test.yml](../../ops/prometheus/alerts.test.yml) makes each rule fire on its condition and only on it |
+| REQ-COMP-001 | Test | [ProblemDetailsContractIT](../../src/test/java/io/github/kaulinmindiola/warden/shared/web/ProblemDetailsContractIT.java) | Passed | Every type of the catalogue is rendered as RFC 9457 problem details with the members of REQ-INT-005; the documented catalogue matches the code (ProblemTypeCatalogueTest) |
+| REQ-COMP-002 | Test | [AccessTokenAuthenticationIT](../../src/test/java/io/github/kaulinmindiola/warden/iam/web/AccessTokenAuthenticationIT.java) | Passed | The ECDSA verifier of the JDK, independent of the JWT library, validates the signature of issued tokens with the public key and reads their standard header and claims; tokens are accepted only as `Authorization: Bearer` (RFC 6750) |
+| REQ-COMP-003 | Inspection | — | 1.1 | Deferred to release 1.1 (Revision History 0.2): mapping of the controls to OWASP ASVS level 2 |
 | REQ-INST-001 | Demonstration | TBD | Pending | — |
 | REQ-INST-002 | Inspection | [KeyConfigurationTest](../../src/test/java/io/github/kaulinmindiola/warden/shared/crypto/KeyConfigurationTest.java) | Passed | Keys come only from the environment; the `prod-like` profile refuses ephemeral keys and the full application does not start without them (ProdLikeProfileIT) |
-| REQ-INST-003 | Test | TBD | Pending | — |
-| REQ-INST-004 | Demonstration | TBD | Pending | — |
+| REQ-INST-003 | Test | [IntegrationTestSupportIT](../../src/test/java/io/github/kaulinmindiola/warden/support/IntegrationTestSupportIT.java) | Passed | Flyway brings an empty database to the latest version at startup, as the schema owner; later startups only validate the applied migrations |
+| REQ-INST-004 | Demonstration | [compose.yaml](../../compose.yaml) | Passed | `docker compose --profile scale down -v --remove-orphans` left no container, network or volume of the project |
 | REQ-BUILD-001 | Demonstration | [CI workflow](../../.github/workflows/ci.yml) | Passed | `./mvnw -B verify` succeeds on a fresh GitHub-hosted runner with only Temurin 21 and Docker, including integration tests on PostgreSQL 17 and Redis 8 |
 | REQ-BUILD-002 | Inspection | [CI workflow](../../.github/workflows/ci.yml) | Passed | Branch protection on `main` requires the `verify` check, linear history and pull requests, also for administrators; a pull request with a formatting violation was blocked:  |
 | REQ-BUILD-003 | Inspection | [pom.xml](../../pom.xml) | Passed | Maven Enforcer `banDynamicVersions` runs in every build; versions pinned by POC-001 |
-| REQ-BUILD-004 | Inspection | TBD | Pending | — |
-| REQ-BUILD-005 | Inspection | TBD | Pending | — |
+| REQ-BUILD-004 | Inspection | [CI workflow](../../.github/workflows/ci.yml) | Passed | The `dependency-review` job fails a pull request that adds a dependency with a known vulnerability of high severity or above; Dependabot checks Maven, actions, Docker and Compose every week ([dependabot.yml](../../.github/dependabot.yml)); each release states its open critical vulnerabilities |
+| REQ-BUILD-005 | Inspection | [CI workflow](../../.github/workflows/ci.yml) | Passed | After `verify`, every push to `main` publishes `ghcr.io/kaulinmindiola/warden:<commit>` with an SBOM and a provenance attestation; first image `2f9482924af06ea7485c0fde0fd1d161e5679cd1` |
 | REQ-DIST-001 | Test | [TwoInstancesIT](../../src/test/java/io/github/kaulinmindiola/warden/TwoInstancesIT.java) | Passed | Login on one instance, refresh on the other and logout back on the first: tokens work on both and the revocation holds on both |
-| REQ-MAINT-001 | Test | TBD | Pending | — |
+| REQ-MAINT-001 | Test | [ArchitectureTest](../../src/test/java/io/github/kaulinmindiola/warden/architecture/ArchitectureTest.java) | Passed | `ApplicationModules.verify()` runs in every build and fails on any access to another module's internal elements |
 | REQ-MAINT-002 | Test | [ArchitectureTest](../../src/test/java/io/github/kaulinmindiola/warden/architecture/ArchitectureTest.java) | Passed | FF-02: notification depends only on shared and receives data through events; FF-03: only its worker package opens system-context transactions |
 | REQ-MAINT-003 | Test | [WorkspaceEndpointRulesIT](../../src/test/java/io/github/kaulinmindiola/warden/isolation/WorkspaceEndpointRulesIT.java) | Passed | R7 fails the build when a workspace handler is missing from IsolationRegistry; shown in CI by the disposable pull request #18 (https://github.com/kaulinmindiola/warden/pull/18), closed without merging |
 | REQ-MAINT-004 | Test | [pom.xml](../../pom.xml) | Passed | JaCoCo gate in `verify`: 97.4 % line coverage of domain and application (525/539); the build fails with a 0.99 minimum |
-| REQ-MAINT-005 | Test | TBD | Pending | — |
-| REQ-MAINT-006 | Inspection | TBD | Pending | — |
-| REQ-MAINT-007-2 | Inspection | TBD | Pending | — |
+| REQ-MAINT-005 | Test | — | 1.1 | Deferred to release 1.1 (Revision History 0.2): upcasting of events of version N-1. Every event of release 1.0 carries `schemaVersion` 1 |
+| REQ-MAINT-006 | Inspection | [ADR index](../adr/README.md) | Passed | ADR-001 to ADR-011 exist and are accepted, each with context, considered options, decision outcome with consequences, and pros and cons; ADR-012 to ADR-020 are accepted as well |
+| REQ-MAINT-007-2 | Inspection | [README](../../README.md) | Passed | Code, ADRs, SDD, SRS, API documents, threat model, guides and commit history are written in English |
 | REQ-MAINT-008 | Demonstration | TBD | Pending | — |
-| REQ-PORT-001 | Demonstration | TBD | Pending | — |
-| REQ-COST-001 | Inspection | TBD | Pending | — |
-| REQ-DEAD-001 | Inspection | TBD | Pending | — |
+| REQ-PORT-001 | Demonstration | [compose.yaml](../../compose.yaml) | Passed | The reference environment runs on `linux/amd64` (Docker Desktop on Windows); `linux/arm64`, a should-level target, has not been demonstrated |
+| REQ-COST-001 | Inspection | [pom.xml](../../pom.xml) | Passed | The licence report of every build (CI artifact `third-party-licences`) lists 173 runtime dependencies, all under licences compatible with a public repository; Redis 8 runs unmodified under AGPLv3 ([ADR-020](../adr/ADR-020-redis-distribution-licence.md)); no paid service |
+| REQ-DEAD-001 | Inspection | [CHANGELOG](../../CHANGELOG.md) | Passed | Phases closed in order with the tags `v0.1.0` to `v0.5.0`, each with its requirements `Passed` or moved to release 1.1 (Revision History 0.2) |
 | REQ-POC-001 | Demonstration | [POC-001 report](../poc/POC-001-library-compatibility.md) | Passed | One smoke test per library on Spring Boot 4.1.2 (11 unit, 10 integration); no fallback needed |
 | REQ-POC-002 | Demonstration | [RlsConnectionPoolLeakIT](../../src/test/java/io/github/kaulinmindiola/warden/poc/RlsConnectionPoolLeakIT.java) | Passed | 1 000 transactions alternating two tenants on a pool of 2 connections: zero cross reads, connection reuse proven; see the [POC-002 report](../poc/POC-002-rls-pool.md) |
-| REQ-CM-001 | Inspection | TBD | Pending | — |
-| REQ-CM-002 | Inspection | TBD | Pending | — |
-| REQ-CM-003 | Test | TBD | Pending | — |
-| REQ-CM-004 | Inspection | TBD | Pending | — |
+| REQ-CM-001 | Inspection | [OpenAPI document](../api/openapi.json) | Passed | Release 1.0 publishes the first contract, under `/api/v1`; OpenApiDocumentIT fails the build when the contract changes without the document, so every change is reviewed in its diff |
+| REQ-CM-002 | Inspection | [CHANGELOG](../../CHANGELOG.md) | Passed | One entry per release since 0.1.0 in the Keep a Changelog format, with each change under its section: added, changed and, when a release has them, deprecated, removed, fixed and security |
+| REQ-CM-003 | Test | [MigrationChecksumTest](../../src/test/java/io/github/kaulinmindiola/warden/MigrationChecksumTest.java) | Passed | The build fails when a merged migration changes or disappears, or when a migration is not recorded; Flyway also validates checksums at every startup (`validate-on-migrate`) |
+| REQ-CM-004 | Inspection | [Revision History](#revision-history) | Passed | No requirement ID was reused or modified; the scope change of release 1.0 is recorded as version 0.2 without changing any requirement |
 
 ## 5. Appendixes
 
