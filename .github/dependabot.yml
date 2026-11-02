@@ -1,0 +1,62 @@
+# Weekly dependency updates (REQ-BUILD-004, SDD V21). Every update is a pull request that runs the
+# full CI, dependency review included. Related updates are grouped to keep the number of pull
+# requests small; security updates are opened as soon as an advisory is published.
+version: 2
+
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: build(deps)
+    groups:
+      spring:
+        patterns:
+          - "org.springframework*"
+          - "io.micrometer*"
+          - "io.projectreactor*"
+      test:
+        patterns:
+          - "org.testcontainers*"
+          - "org.wiremock*"
+          - "com.tngtech.archunit*"
+      build-plugins:
+        patterns:
+          - "org.apache.maven.plugins*"
+          - "org.codehaus.mojo*"
+          - "org.jacoco*"
+          - "com.diffplug.spotless*"
+          - "com.palantir.javaformat*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: ci(deps)
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  # Base images of the Dockerfile, pinned by digest.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: build(deps)
+
+  # Images of the reference environment in compose.yaml, pinned by digest.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: build(deps)

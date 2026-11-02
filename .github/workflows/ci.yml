@@ -36,6 +36,14 @@ jobs:
       - name: Verify (format, enforcer, unit and integration tests, coverage report)
         run: ./mvnw -B -ntp verify
 
+      - name: Upload the licence report of the shipped dependencies (REQ-COST-001)
+        uses: actions/upload-artifact@v7
+        with:
+          name: third-party-licences
+          path: target/generated-sources/license/THIRD-PARTY.txt
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v7
@@ -46,6 +54,23 @@ jobs:
             target/failsafe-reports/
           if-no-files-found: ignore
           retention-days: 7
+
+  # Dependencies added or changed by a pull request, checked against the GitHub Advisory Database:
+  # one with a known vulnerability of high or critical severity fails the check (REQ-BUILD-004).
+  dependency-review:
+    name: dependency-review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v5.0.0
+        with:
+          fail-on-severity: high
 
   # Container image of every commit on main, built only once verify has passed (REQ-BUILD-005,
   # SDD V21). Tagged with the commit SHA, for linux/amd64, the verified platform (REQ-PORT-001).

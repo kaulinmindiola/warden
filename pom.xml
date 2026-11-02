@@ -46,6 +46,7 @@
 		<spotless.version>3.10.4</spotless.version>
 		<palantir-java-format.version>2.102.0</palantir-java-format.version>
 		<jacoco.version>0.8.15</jacoco.version>
+<license-maven-plugin.version>2.7.1</license-maven-plugin.version>
 
 		<!-- Minimum line coverage of the domain and application layers together (REQ-MAINT-004, FF-06) -->
 		<coverage.line.minimum>0.80</coverage.line.minimum>
@@ -392,6 +393,26 @@
 									</limits>
 								</rule>
 							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- REQ-COST-001: licences of every dependency shipped in the application (compile and runtime
+			     scopes), listed in target/generated-sources/license/THIRD-PARTY.txt, packaged in the jar and
+			     kept by CI as an artifact. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>license-maven-plugin</artifactId>
+				<version>${license-maven-plugin.version}</version>
+				<executions>
+					<execution>
+						<id>third-party-licences</id>
+						<goals>
+							<goal>add-third-party</goal>
+						</goals>
+						<configuration>
+							<excludedScopes>test,provided,system</excludedScopes>
 						</configuration>
 					</execution>
 				</executions>
