@@ -1,94 +1,143 @@
 # Warden
 
-Workspace identity, access & notification platform — a Spring Boot modular monolith
-with tenant isolation via PostgreSQL Row Level Security, refresh-token rotation with
-reuse detection, and reliable e-mail delivery.
+[![CI](https://github.com/kaulinmindiola/warden/actions/workflows/ci.yml/badge.svg)](https://github.com/kaulinmindiola/warden/actions/workflows/ci.yml)
 
-## Status
+Workspace identity, access & notification platform: a Spring Boot modular monolith that registers
+and authenticates users, authorizes every request against the caller's current role in a
+workspace, and notifies security and business events by e-mail.
 
-🚧 Early development. Milestone **M4 — notifications** (`v0.5.0`) is complete:
+A multi-workspace API needs more than a framework's defaults. A valid token must never cross into
+another workspace, a stolen session must stop working at once, and a password reset e-mail must
+not be lost because a provider is down. Warden makes these properties explicit and proves each one
+with automated tests that reproduce the attack or the failure:
 
-- Identity core (M1): registration, e-mail verification, login, sessions, refresh-token rotation
-  with reuse detection, logout, session termination and password reset, all without revealing
-  whether an e-mail has an account.
-- Workspaces with the roles VIEWER, MEMBER, ADMIN and OWNER, member management with last-OWNER
-  protection, invitations by e-mail with single-use links, and notes as the reference resource.
-- Tenant isolation in three layers: authorization against the current membership on every
-  request, a Hibernate tenant filter and forced PostgreSQL Row Level Security. A non-member cannot
-  tell a foreign or deleted workspace from a non-existent one.
-- Abuse protection (M3): rate limits on login, refresh, password recovery, verification resend
-  and invitations, enforced with buckets local to the instance when Redis fails. A Redis outage
-  keeps revocation working through PostgreSQL; a PostgreSQL outage answers 503 and never grants
-  access. Audit records are complete and kept 365 days, no response carries a secret, and the
-  `prod-like` profile serves HTTPS only with HSTS.
-- Notifications (M4): every event becomes one delivery per recipient, rendered from plain-text
-  templates in Spanish or English and sent through a primary or a secondary e-mail provider with
-  timeouts, circuit breakers, failover and backoff. Deliveries end `SENT`, `DEAD` or `CANCELLED`
-  across crashes, restarts and several instances; ADMINs list them and retry dead ones; links
-  carry their token only in the URL fragment; old events and credentials are purged daily.
-- `./mvnw verify` runs formatting, version, architecture, unit and integration checks against
-  real PostgreSQL 17 and Redis 8, fails below 80 % line coverage of the domain and application
-  layers, and fails if a workspace endpoint is missing from the isolation suite or does not
-  declare its minimum role.
+| ID | Guarantee |
+|----|-----------|
+| G-01 | **Isolation:** a valid token never grants access to data of a workspace its holder does not belong to. |
+| G-02 | **Containment:** a compromised session can be terminated immediately, without waiting for the token to expire. |
+| G-03 | **Reliable delivery:** events that trigger notifications are notified without loss, even when providers fail. |
+| G-04 | **Verifiable engineering:** every guarantee is backed by automated tests. |
 
-Operability and the release come next (M5): verified telemetry, a single-command run, a published
-image and the usage guide.
+Release **1.0.0**. The [changelog](CHANGELOG.md) lists what each milestone added.
 
-## Run locally
+## Guarantees and how they are proven
 
-Prerequisites: JDK 21 (Temurin), Docker Desktop (or Docker Engine with Compose) and Git.
+Every test below runs in CI against real PostgreSQL 17 and Redis 8 (Testcontainers); only the
+e-mail providers (WireMock) and the clock are simulated.
 
-1. Start PostgreSQL, Redis and the two simulated e-mail providers:
+| Guarantee | Mechanism | Proven by |
+|-----------|-----------|-----------|
+| G-01 Isolation | The caller's membership and role are read on every request and never cached ([ADR-003](docs/adr/ADR-003-roles-outside-the-token.md)); every query names the workspace of the path; forced PostgreSQL Row Level Security keyed by transaction-local settings, under a runtime role that owns no table ([ADR-005](docs/adr/ADR-005-tenant-isolation-rls.md)). Non-members get the same 404 as for a workspace that does not exist ([ADR-004](docs/adr/ADR-004-not-found-for-non-members.md)) | [`IsolationSuiteIT`](src/test/java/io/github/kaulinmindiola/warden/isolation/IsolationSuiteIT.java) runs foreign and deleted workspace cases against every workspace endpoint; [`NoteRowLevelSecurityIT`](src/test/java/io/github/kaulinmindiola/warden/notes/infrastructure/NoteRowLevelSecurityIT.java) proves Row Level Security with plain JDBC and no application filter; [`RlsConnectionPoolLeakIT`](src/test/java/io/github/kaulinmindiola/warden/poc/RlsConnectionPoolLeakIT.java) shows that no tenant context survives on a pooled connection; [`WorkspaceEndpointRulesIT`](src/test/java/io/github/kaulinmindiola/warden/isolation/WorkspaceEndpointRulesIT.java) fails the build when a new workspace endpoint is not in the isolation suite |
+| G-02 Containment | Access tokens last 10 minutes; refresh tokens rotate on every use and a reused one revokes the whole session ([ADR-006](docs/adr/ADR-006-refresh-token-rotation.md)); revoked sessions are checked on every request in Redis, with PostgreSQL as the fallback when Redis fails ([ADR-007](docs/adr/ADR-007-revocation-denylist-and-degradation.md)) | [`ConcurrentRefreshIT`](src/test/java/io/github/kaulinmindiola/warden/iam/web/ConcurrentRefreshIT.java) races the same refresh token 50 times and always gets exactly one winner; [`RefreshReuseAndExpiryIT`](src/test/java/io/github/kaulinmindiola/warden/iam/web/RefreshReuseAndExpiryIT.java), [`SessionRevocationIT`](src/test/java/io/github/kaulinmindiola/warden/iam/web/SessionRevocationIT.java); [`RevocationDegradationIT`](src/test/java/io/github/kaulinmindiola/warden/iam/web/RevocationDegradationIT.java) keeps rejecting revoked sessions with Redis frozen; [`TwoInstancesIT`](src/test/java/io/github/kaulinmindiola/warden/TwoInstancesIT.java) honours a revocation across two running instances |
+| G-03 Reliable delivery | Events are written in the same transaction as the change and dispatched from a transactional outbox ([ADR-008](docs/adr/ADR-008-transactional-outbox.md)); one delivery per event, recipient and channel; leased claims with the delivery id as idempotency key ([ADR-015](docs/adr/ADR-015-delivery-leases.md)); timeouts, circuit breakers, failover to a second provider and backoff, then a dead-letter queue that ADMINs can retry ([ADR-009](docs/adr/ADR-009-provider-resilience.md)) | [`DeliveryResilienceIT`](src/test/java/io/github/kaulinmindiola/warden/notification/application/worker/DeliveryResilienceIT.java) keeps the API answering with both providers failing and resumes deliveries after a restart; [`TwoInstancesIT`](src/test/java/io/github/kaulinmindiola/warden/TwoInstancesIT.java) turns 1,000 events into exactly 1,000 deliveries across two instances; [`OutboxDispatcherIT`](src/test/java/io/github/kaulinmindiola/warden/shared/outbox/OutboxDispatcherIT.java), [`DeliveryWorkerIT`](src/test/java/io/github/kaulinmindiola/warden/notification/application/worker/DeliveryWorkerIT.java), [`GracefulShutdownIT`](src/test/java/io/github/kaulinmindiola/warden/shared/GracefulShutdownIT.java) |
+| G-04 Verifiable engineering | Each test names the requirements it proves with `@Verifies("REQ-…")`; the verification matrix links every requirement to its test and evidence | [Verification matrix](docs/requirements/SRS-Warden.md#4-verification) (SRS Section 4); [`ArchitectureTest`](src/test/java/io/github/kaulinmindiola/warden/architecture/ArchitectureTest.java); [`SecretsInResponsesIT`](src/test/java/io/github/kaulinmindiola/warden/SecretsInResponsesIT.java) and [`TelemetryScanIT`](src/test/java/io/github/kaulinmindiola/warden/TelemetryScanIT.java) search every response, log line and metric label for secrets |
 
-   ```bash
-   docker compose up -d
-   ```
+## Architecture
 
-2. Start the application with the `local` profile, which uses the local-only credentials of
-   `compose.yaml` and generates ephemeral keys:
+One deployable with five modules whose boundaries are verified in every build
+([ADR-001](docs/adr/ADR-001-modular-monolith.md)):
 
-   ```bash
-   ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
-   ```
-
-   On Windows PowerShell: `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"`.
-
-3. The API listens on `http://localhost:8080/api/v1`; health checks are on the management port,
-   `http://localhost:8081/actuator/health`.
-
-4. Try it:
-
-   ```bash
-   curl -i -H "Content-Type: application/json" \
-     -d '{"email":"ada@example.com","password":"correct horse battery staple"}' \
-     http://localhost:8080/api/v1/auth/register
-   curl -s -H "Content-Type: application/json" \
-     -d '{"email":"ada@example.com","password":"correct horse battery staple"}' \
-     http://localhost:8080/api/v1/auth/login
-   ```
-
-No e-mail leaves your machine: the simulated providers keep every message in their journals,
-`http://localhost:8091/__admin/requests` (provider A) and `http://localhost:8092/__admin/requests`
-(provider B), where the verification, reset and invitation links can be copied. Links point to
-`http://localhost:3001` by default; the `WARDEN_LINK_*` variables of
-[`.env.example`](.env.example) change them.
-
-Ephemeral keys do not survive a restart: tokens issued before it become invalid. To keep them,
-and to change ports or passwords, see [`.env.example`](.env.example).
-
-The `prod-like` profile behaves like production: the API is served over HTTPS only, on port
-`WARDEN_SERVER_PORT` (8443 by default), every response carries `Strict-Transport-Security`, and
-the keys and the TLS keystore are mandatory. Startup fails, naming the variable, when one is
-missing (REQ-SEC-019, REQ-INST-002). The TLS and key sections of [`.env.example`](.env.example)
-explain how to create them.
-
-Run the full build, including the integration tests on Testcontainers (Docker must be running):
-
-```bash
-./mvnw verify
+```mermaid
+flowchart LR
+    iam["iam<br/>accounts, sessions, tokens"]
+    workspace["workspace<br/>workspaces, roles, invitations"]
+    notes["notes<br/>reference resource"]
+    notification["notification<br/>templates, deliveries, providers"]
+    shared["shared<br/>web, security, tenancy, outbox, audit, crypto"]
+    workspace --> iam
+    iam --> shared
+    workspace --> shared
+    notes --> shared
+    notification --> shared
+    iam -. "events through the outbox" .-> notification
+    workspace -. "events through the outbox" .-> notification
 ```
 
-### API
+- Spring Modulith verifies that no module reaches into another module's internals; ArchUnit checks
+  that `shared` depends on no domain module and that `notification` only uses `shared` and
+  receives everything else through events.
+- Inside each module, `web` calls `application`, which owns the transactions and uses `domain`
+  and `infrastructure`; modules refer to each other by id, never by JPA association.
+- Every instance runs the HTTP pipeline (virtual threads), the outbox dispatcher and the delivery
+  worker. Exclusion between instances happens in PostgreSQL with `SKIP LOCKED`, so there is no
+  leader election and no message broker.
+
+The [Software Design Description](docs/design/SDD-Warden.md) has every view; the
+[ADR index](docs/adr/README.md) has the twenty decisions behind them.
+
+## Quick start
+
+Docker is the only prerequisite. One command builds the image and starts Warden with PostgreSQL,
+Redis, two simulated e-mail providers, Prometheus and Grafana:
+
+```bash
+git clone https://github.com/kaulinmindiola/warden.git
+cd warden
+docker compose up -d --wait
+```
+
+Register and log in (Linux, macOS or Git Bash):
+
+```bash
+curl -i -H "Content-Type: application/json" \
+  -d '{"email":"ada@example.com","password":"correct horse battery staple"}' \
+  http://localhost:8080/api/v1/auth/register
+curl -s -H "Content-Type: application/json" \
+  -d '{"email":"ada@example.com","password":"correct horse battery staple"}' \
+  http://localhost:8080/api/v1/auth/login
+```
+
+In PowerShell 7, call `curl.exe`, not `curl`, so the real curl runs, and keep the JSON in single
+quotes:
+
+```powershell
+curl.exe -i -H 'Content-Type: application/json' `
+  -d '{"email":"ada@example.com","password":"correct horse battery staple"}' `
+  http://localhost:8080/api/v1/auth/register
+```
+
+| Service | Address |
+|---------|---------|
+| API | `http://localhost:8080/api/v1` |
+| Grafana dashboard "Warden — Access & Delivery" | `http://localhost:3000` (anonymous viewer) |
+| Prometheus | `http://localhost:9090` |
+| E-mails sent through providers A and B | `http://localhost:8091/__admin/requests`, `http://localhost:8092/__admin/requests` |
+
+No e-mail leaves your machine: the simulated providers keep every message, and the verification,
+reset and invitation links can be copied from their journals. A second instance runs with
+`docker compose --profile scale up -d --wait` on port 8082.
+
+Stop everything and remove its containers, network and volumes:
+
+```bash
+docker compose --profile scale down -v --remove-orphans
+```
+
+The [local environment guide](docs/operations/local-environment.md) walks through the whole flow
+in PowerShell and in Linux shells, including the Bruno collection, the dashboard, a second
+instance and the troubleshooting of each service.
+
+### Develop
+
+With JDK 21 and Docker running:
+
+```bash
+./mvnw verify                                                  # full build and every test
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local        # run from source against Compose
+```
+
+On Windows PowerShell: `.\mvnw.cmd verify` and
+`.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"`. The `local` profile uses the
+local-only credentials of `compose.yaml` and generates ephemeral keys; `.env.example` lists every
+setting. The `prod-like` profile serves HTTPS only, sends `Strict-Transport-Security` and refuses
+to start without its keys and TLS keystore.
+
+## API
+
+31 operations under `/api/v1`, JSON only, documented in [OpenAPI](docs/api/openapi.json)
+(generated from the code and checked in every build) and exercised end to end by the
+[Bruno collection](docs/api/bruno). Errors are RFC 9457 problem details from a fixed
+[catalogue of problem types](docs/api/problem-types.md).
 
 | Method | Path | Access |
 |--------|------|--------|
@@ -125,18 +174,67 @@ Run the full build, including the integration tests on Testcontainers (Docker mu
 | PUT | `/api/v1/me/notification-preferences` | Authenticated |
 
 Roles are ordered VIEWER < MEMBER < ADMIN < OWNER; a role grants everything the lower ones do.
-For non-members, workspace routes answer 404 exactly as for a workspace that does not exist.
-Login, refresh, password recovery, verification resend and invitations are rate limited: past
-the limit they answer 429 with `Retry-After`.
-Errors follow RFC 9457; the types are listed in [problem-types.md](docs/api/problem-types.md).
+Login, refresh, password recovery, verification resend and invitations are rate limited and answer
+429 with `Retry-After` past the limit. Responses never reveal whether an e-mail has an account.
+
+## Engineering practices
+
+- **CI gates** on every pull request: formatting (Spotless), no version ranges or snapshots
+  (Maven Enforcer), module boundaries, unit and integration tests, at least 80 % line coverage of
+  the domain and application layers (JaCoCo), the isolation suite registry, the OpenAPI document,
+  the problem type catalogue and the checksums of merged migrations, plus a dependency review that
+  blocks known vulnerabilities of high severity. `main` is protected and takes rebased pull
+  requests only.
+- **Delivery:** every merge to `main` publishes `ghcr.io/kaulinmindiola/warden:<commit>` with an
+  SBOM and a provenance attestation. Base images and every image of the reference environment are
+  pinned by digest; Dependabot proposes updates every week; each build writes a licence report of
+  the runtime dependencies.
+- **Tests:** unit tests for the domain; integration tests on Testcontainers for persistence, the
+  API, concurrency (50 repetitions of each race), chaos (frozen Redis and PostgreSQL, failing
+  providers), two instances, graceful shutdown and controlled clocks for every expiry and purge.
+  The tests connect with the runtime database role; the superuser only seeds and inspects.
+- **Security:** a [STRIDE threat model](docs/security/threat-model.md) traces every threat to its
+  control, requirement and test; Argon2id passwords, ES256 access tokens, hashed refresh and link
+  tokens, AES-256-GCM sealed tokens in events, an append-only audit log kept 365 days.
+- **Operability:** Prometheus metrics with low-cardinality labels on an unpublished management
+  port, structured JSON logs with masked secrets and trace correlation from a request to its
+  e-mail ([log correlation](docs/operations/log-correlation.md)), five alert rules and a
+  provisioned Grafana dashboard ([ADR-018](docs/adr/ADR-018-observability-stack.md)).
+- **Decisions:** twenty [Architecture Decision Records](docs/adr/README.md), all accepted.
+
+## Scope
+
+Release 1.0 delivers authentication with sessions and token rotation, workspaces with four roles,
+invitations, notes as the reference resource, notifications with two providers, abuse protection,
+auditing, the reference environment and the published image.
+
+Moved to release 1.1 to keep 1.0 finishable, as recorded in the SRS Revision History and marked
+`1.1` in the verification matrix:
+
+- Workspace template customization and versioning (REQ-FUNC-053, 054); 1.0 ships read-only global
+  templates in Spanish and English.
+- New-device login notice (REQ-FUNC-010).
+- The load-test campaign of REQ-PERF-001 to 005 on defined hardware.
+- The statistical analysis of the response-time equalization (REQ-SEC-010); the mechanism is in
+  1.0.
+- Upcasting of events of the previous schema version (REQ-MAINT-005) and the OWASP ASVS mapping
+  (REQ-COMP-003).
+
+Never in scope: MFA, social login, SSO, SMS or push, an administration UI, HTML e-mails or real
+e-mail providers.
 
 ## Documentation
 
-- [Software Requirements Specification](docs/requirements/SRS-Warden.md)
-- [Software Design Description](docs/design/SDD-Warden.md)
-- [Architecture Decision Records](docs/adr/README.md)
-- [Threat model](docs/security/threat-model.md)
-- [Changelog](CHANGELOG.md)
+| Document | Contents |
+|----------|----------|
+| [Software Requirements Specification](docs/requirements/SRS-Warden.md) | Requirements, business rules and the verification matrix (Section 4) |
+| [Software Design Description](docs/design/SDD-Warden.md) | Views, data model, security design and fitness functions |
+| [Architecture Decision Records](docs/adr/README.md) | Index and the twenty records |
+| [Threat model](docs/security/threat-model.md) | STRIDE threats, controls, tests and accepted risks |
+| [OpenAPI](docs/api/openapi.json), [problem types](docs/api/problem-types.md), [Bruno collection](docs/api/bruno) | The API contract and a runnable collection covering every operation |
+| [Local environment guide](docs/operations/local-environment.md) | Running, observing and stopping the reference environment |
+| [Log correlation](docs/operations/log-correlation.md) | Following a request to the e-mail it produced |
+| [Changelog](CHANGELOG.md) | Changes per release |
 
 ## License
 

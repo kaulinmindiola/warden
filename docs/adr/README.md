@@ -1,9 +1,34 @@
 # ADR Inventory — Warden
 
-Version 0.1 · Kaulin Mindiola · 2026-10-20  
+Version 1.0 · Kaulin Mindiola · 2026-11-02  
 Companion to `SDD-Warden.md` (Section 4). Location in repository: `/docs/adr/README.md`.
 
-This inventory plans the Architecture Decision Records of Warden release 1.0. It is **not** a set of ADRs: each entry states the problem, why it deserves a record, what it affects, the design direction already reflected in the SDD, and when it will be developed. Full records are written with `adr-template.md` when the implementation reaches the decision.
+This inventory indexes the Architecture Decision Records of Warden release 1.0. Each entry states the problem, why it deserves a record, what it affects and the design direction the SDD was built on, and links the full record, written in the MADR format when the implementation reached the decision. All twenty decisions are accepted; none was deferred, cancelled or superseded.
+
+## Summary
+
+| ADR | Decision | Status | Phase |
+|-----|----------|--------|-------|
+| [ADR-001](ADR-001-modular-monolith.md) | Modular monolith instead of microservices | Accepted | 0 |
+| [ADR-002](ADR-002-self-issued-tokens.md) | Self-issued tokens instead of an external IdP | Accepted | 1 |
+| [ADR-003](ADR-003-roles-outside-the-token.md) | Roles resolved per request, outside the JWT | Accepted | 1 |
+| [ADR-004](ADR-004-not-found-for-non-members.md) | 404 for non-members, 403 for insufficient role | Accepted | 2 |
+| [ADR-005](ADR-005-tenant-isolation-rls.md) | Tenant isolation with application filter and Row Level Security | Accepted | 0–2 |
+| [ADR-006](ADR-006-refresh-token-rotation.md) | Atomic refresh-token rotation and reuse detection | Accepted | 1 |
+| [ADR-007](ADR-007-revocation-denylist-and-degradation.md) | Revocation denylist in Redis with PostgreSQL fallback and reconciliation | Accepted | 3 |
+| [ADR-008](ADR-008-transactional-outbox.md) | Transactional outbox with at-least-once dispatch | Accepted | 1 (write side) / 4 (dispatch) |
+| [ADR-009](ADR-009-provider-resilience.md) | Provider resilience: failover, circuit breaker, timeouts and backoff | Accepted | 4 |
+| [ADR-010](ADR-010-virtual-threads-bounded-resources.md) | Virtual threads with explicitly bounded resources | Accepted | 1 |
+| [ADR-011](ADR-011-link-token-protection.md) | Protection of link tokens inside events and deliveries | Accepted | 1 |
+| [ADR-012](ADR-012-access-token-signing-and-keys.md) | Access-token signing algorithm and key management | Accepted | 1 |
+| [ADR-013](ADR-013-persistence-migrations-roles.md) | Persistence access strategy, migrations and database roles | Accepted | 0–1 |
+| [ADR-014](ADR-014-rate-limiting.md) | Rate-limiting mechanism and local fallback | Accepted | 3 |
+| [ADR-015](ADR-015-delivery-leases.md) | Delivery scheduling and claiming with leases | Accepted | 4 |
+| [ADR-016](ADR-016-placeholder-renderer.md) | Restricted placeholder renderer for templates | Accepted | 4 |
+| [ADR-017](ADR-017-event-carried-recipient-data.md) | Notification data ownership and event-carried recipient data | Accepted | 1 |
+| [ADR-018](ADR-018-observability-stack.md) | Observability stack and trace correlation without a trace backend | Accepted | 5 |
+| [ADR-019](ADR-019-response-time-equalization.md) | Response-time equalization against account enumeration | Accepted | 1 (mechanism) / 1.1 (calibration, REQ-SEC-010) |
+| [ADR-020](ADR-020-redis-distribution-licence.md) | Redis distribution and licence under CON-007 | Accepted | 0 |
 
 ## Conventions
 
@@ -146,7 +171,7 @@ This inventory plans the Architecture Decision Records of Warden release 1.0. It
 - **Reason:** REQ-SEC-010 is measured statistically; the mechanism affects latency targets.
 - **Affected elements:** V11, V14-A2/A3; REQ-SEC-010; REQ-PERF-001; BR-007.
 - **Baseline direction:** Dummy Argon2 hash for unknown e-mails; configurable minimum response time for register and forgot-password.
-- **Status:** ACCEPTED — [ADR-019](ADR-019-response-time-equalization.md) · **Phase:** 1 (mechanism) / 3 (calibration)
+- **Status:** ACCEPTED — [ADR-019](ADR-019-response-time-equalization.md) · **Phase:** 1 (mechanism) / 1.1 (calibration, REQ-SEC-010)
 
 ### ADR-020 — Redis distribution and licence under CON-007
 - **Description:** Which Redis-compatible server satisfies "Redis" (CON-004) and "open-source only" (CON-007).
@@ -155,7 +180,7 @@ This inventory plans the Architecture Decision Records of Warden release 1.0. It
 - **Baseline direction:** Redis 8.x under AGPLv3, unmodified and self-hosted; Valkey as drop-in fallback.
 - **Status:** ACCEPTED — [ADR-020](ADR-020-redis-distribution-licence.md) · **Phase:** 0
 
-## Suggested development order
+## Development order
 
 ```mermaid
 flowchart LR
@@ -189,4 +214,4 @@ flowchart LR
     A009 --> A015
 ```
 
-ADR-005 is finalized after POC-002; ADR-009 and ADR-014 after POC-001. Decisions are developed when the implementation needs them, not strictly in this order.
+ADR-005 was finalized after POC-002, and ADR-009 and ADR-014 after POC-001. Each decision was recorded when the implementation needed it, not strictly in this order.
