@@ -65,7 +65,7 @@ docker run --rm --network warden_default -v "$PWD/docs/api/bruno:/collection" -w
   --env-var baseUrl=http://warden:8080/api/v1 --env-var providerAUrl=http://provider-a:8080
 ```
 
-The run takes about 30 seconds and ends with `Requests: 45 (45 Passed)` and `Tests: 45/45`. Three
+The run takes about 30 seconds and ends with an execution summary table whose `Status` is `PASS`, with `Requests` 45 (45 Passed) and `Tests` 45/45. In a Windows console that does not use UTF-8, the check marks and the borders of the table appear as other characters; the values are the same. Three
 requests expect an error on purpose, and their documentation says why: a login with a wrong password
 (401), a verification resend for a verified account (409) and a retry of a delivery that was sent (409).
 The collection can be run again: every run creates new accounts.
