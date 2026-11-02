@@ -45,7 +45,7 @@
 		<!-- Build tooling not managed by spring-boot-starter-parent -->
 		<spotless.version>3.10.4</spotless.version>
 		<palantir-java-format.version>2.102.0</palantir-java-format.version>
-		<jacoco.version>0.8.15</jacoco.version>
+		<jacoco.version>0.8.16</jacoco.version>
 <license-maven-plugin.version>2.7.1</license-maven-plugin.version>
 
 		<!-- Minimum line coverage of the domain and application layers together (REQ-MAINT-004, FF-06) -->
