@@ -1,0 +1,29 @@
+meta {
+  name: Log in
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{ownerEmail}}",
+    "password": "{{password}}"
+  }
+}
+
+script:post-response {
+  bru.setVar("accessToken", res.body.access_token);
+  bru.setVar("refreshToken", res.body.refresh_token);
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

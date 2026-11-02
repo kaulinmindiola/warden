@@ -1,0 +1,27 @@
+meta {
+  name: Accept the new invitation
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/invitations/accept
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{inviteeToken}}
+}
+
+body:json {
+  {
+    "token": "{{invitationToken}}"
+  }
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

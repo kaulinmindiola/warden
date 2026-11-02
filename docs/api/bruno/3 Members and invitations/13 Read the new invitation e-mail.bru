@@ -1,0 +1,42 @@
+meta {
+  name: Read the new invitation e-mail
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{providerAUrl}}/__admin/requests
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // The outbox is dispatched every 500 ms and deliveries are sent every second.
+  await bru.sleep(4000);
+}
+
+script:post-response {
+  const inviteeEmail = bru.getVar("inviteeEmail");
+  const message = (res.body.requests || [])
+    .map((entry) => {
+      try {
+        return JSON.parse(entry.request.body);
+      } catch (error) {
+        return null;
+      }
+    })
+    .find((candidate) => candidate && candidate.to === inviteeEmail);
+  const match = message ? message.text.match(/wot_[A-Za-z0-9_-]+/) : null;
+  bru.setVar("invitationToken", match ? match[0] : "");
+}
+
+tests {
+  test("finds the e-mail with its link invitationToken", function () {
+    expect(res.status).to.equal(200);
+    expect(bru.getVar("invitationToken")).to.match(/^wot_/);
+  });
+}
+
+docs {
+  Reads the e-mail from the request journal of simulated provider A (WireMock), as the recipient would read their inbox.
+}

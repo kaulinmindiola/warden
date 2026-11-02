@@ -1,0 +1,21 @@
+meta {
+  name: Remove the member
+  type: http
+  seq: 15
+}
+
+delete {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/members/{{inviteeUserId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("answers 204", function () {
+    expect(res.status).to.equal(204);
+  });
+}

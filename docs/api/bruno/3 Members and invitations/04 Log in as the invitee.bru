@@ -1,0 +1,28 @@
+meta {
+  name: Log in as the invitee
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{inviteeEmail}}",
+    "password": "{{password}}"
+  }
+}
+
+script:post-response {
+  bru.setVar("inviteeToken", res.body.access_token);
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

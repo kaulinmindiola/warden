@@ -1,0 +1,28 @@
+meta {
+  name: Refresh the tokens
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/auth/refresh
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "refresh_token": "{{refreshToken}}"
+  }
+}
+
+script:post-response {
+  bru.setVar("accessToken", res.body.access_token);
+  bru.setVar("refreshToken", res.body.refresh_token);
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

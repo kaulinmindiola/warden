@@ -1,0 +1,36 @@
+meta {
+  name: Invite someone else
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/invitations
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "email": "{{pendingEmail}}",
+    "role": "VIEWER"
+  }
+}
+
+script:pre-request {
+  bru.setVar("pendingEmail", "pending-" + Date.now() + "@mail.test");
+}
+
+script:post-response {
+  bru.setVar("pendingInvitationId", res.body.id);
+}
+
+tests {
+  test("answers 201", function () {
+    expect(res.status).to.equal(201);
+  });
+}

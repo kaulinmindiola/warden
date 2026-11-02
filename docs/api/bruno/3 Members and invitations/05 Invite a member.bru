@@ -1,0 +1,32 @@
+meta {
+  name: Invite a member
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/invitations
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "email": "{{inviteeEmail}}",
+    "role": "MEMBER"
+  }
+}
+
+script:post-response {
+  bru.setVar("invitationId", res.body.id);
+}
+
+tests {
+  test("answers 201", function () {
+    expect(res.status).to.equal(201);
+  });
+}

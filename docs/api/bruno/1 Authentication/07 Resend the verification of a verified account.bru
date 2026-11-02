@@ -1,0 +1,25 @@
+meta {
+  name: Resend the verification of a verified account
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/auth/email/verify/resend
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("answers 409", function () {
+    expect(res.status).to.equal(409);
+  });
+}
+
+docs {
+  The account is already verified: 409 email-already-verified. An unverified account gets 202.
+}

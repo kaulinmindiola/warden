@@ -1,0 +1,26 @@
+meta {
+  name: Find the other session
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/auth/sessions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+script:post-response {
+  const other = res.body.items.find((session) => !session.current);
+  bru.setVar("otherSessionId", other ? other.id : "");
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

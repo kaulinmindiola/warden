@@ -1,0 +1,41 @@
+meta {
+  name: Change my notification preferences
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/me/notification-preferences
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "locale": "en",
+    "preferences": []
+  }
+}
+
+script:pre-request {
+  // Switches the first optional notification, if any, and keeps English as the language.
+  const preferences = JSON.parse(bru.getVar("preferences") || "[]");
+  req.setBody({
+    locale: "en",
+    preferences: preferences.slice(0, 1).map((preference) => ({
+      key: preference.key,
+      workspaceId: preference.workspaceId,
+      enabled: !preference.enabled
+    }))
+  });
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Edit the note
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/notes/{{noteId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "title": "Release checklist",
+    "body": "Run the full Bruno collection, then tag the release.",
+    "version": {{noteVersion}}
+  }
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}
+
+docs {
+  The version read last is sent back; a stale version answers 409 version-conflict (REQ-FUNC-045).
+}

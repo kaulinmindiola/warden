@@ -1,0 +1,21 @@
+meta {
+  name: Revoke the pending invitation
+  type: http
+  seq: 17
+}
+
+delete {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/invitations/{{pendingInvitationId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("answers 204", function () {
+    expect(res.status).to.equal(204);
+  });
+}

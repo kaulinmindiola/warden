@@ -1,0 +1,31 @@
+meta {
+  name: Create a workspace
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/workspaces
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "name": "Release team"
+  }
+}
+
+script:post-response {
+  bru.setVar("workspaceId", res.body.id);
+}
+
+tests {
+  test("answers 201", function () {
+    expect(res.status).to.equal(201);
+  });
+}

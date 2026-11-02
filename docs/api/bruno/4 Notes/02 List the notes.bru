@@ -1,0 +1,21 @@
+meta {
+  name: List the notes
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/notes
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

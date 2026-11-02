@@ -1,0 +1,21 @@
+meta {
+  name: List pending invitations
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/invitations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

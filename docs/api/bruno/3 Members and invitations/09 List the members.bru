@@ -1,0 +1,26 @@
+meta {
+  name: List the members
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/members
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+script:post-response {
+  const invitee = res.body.items.find((member) => member.email === bru.getVar("inviteeEmail"));
+  bru.setVar("inviteeUserId", invitee ? invitee.userId : "");
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}
