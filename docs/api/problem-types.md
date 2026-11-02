@@ -72,3 +72,14 @@ whether an e-mail address belongs to an account.
 A `service-unavailable` response carries `Retry-After: 5`. It is sent when PostgreSQL cannot be
 reached, alone or together with Redis (REQ-REL-007, REQ-REL-009, ADR-007); the request is denied,
 never answered without its data.
+
+## Stability
+
+- `type`, `status` and `title` of every type in the catalogue are part of the `/api/v1` contract:
+  within v1 no type is renamed, removed or given another status.
+- `detail` is written for people; its wording may change in any release.
+- A later 1.x release may add types. A client that receives a `type` it does not know handles the
+  response by its `status`.
+- `ProblemTypeCatalogueTest` fails the build when this catalogue and the `ProblemType`
+  enumeration of the code disagree on a slug, a status, a title or their order. The OpenAPI
+  document (`docs/api/openapi.json`) refers to this page for the types.

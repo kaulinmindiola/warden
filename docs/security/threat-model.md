@@ -1,10 +1,10 @@
 # Threat model
 
-- Version: 3 (milestone M4, `v0.5.0`)
-- Date: 2026-11-01
-- Scope: authentication and sessions, the `iam` module and the `shared` security kernel (v0); workspaces, roles, invitations, notes and tenant isolation (v1); abuse protection, degraded modes, audit retention and transport security (v2); notifications: outbox dispatch, deliveries, templates, links, e-mail providers and retention purges (v3)
+- Version: 4 (milestone M5, `v1.0.0`)
+- Date: 2026-11-02
+- Scope: authentication and sessions, the `iam` module and the `shared` security kernel (v0); workspaces, roles, invitations, notes and tenant isolation (v1); abuse protection, degraded modes, audit retention and transport security (v2); notifications: outbox dispatch, deliveries, templates, links, e-mail providers and retention purges (v3); operability: telemetry, the container image, the reference environment, the supply chain and graceful shutdown (v4)
 - Method: STRIDE per element; each threat is traced to its misuse case (MUC), requirement and test
-- Next revision: milestone M5 (operability and release)
+- Next revision: release 1.1 (workspace template customization, D-01)
 
 ## System under analysis
 
@@ -17,6 +17,7 @@ flowchart LR
     O -->|dispatch, SKIP LOCKED| N["notification module: deliveries, worker"]
     N -->|"JSON over HTTP, 2 s / 5 s timeouts"| E["E-mail providers A and B (simulated)"]
     E -.->|"e-mail with link, token in the fragment"| U["Recipient, then the API consumer's pages"]
+    A -.->|"metrics and health, management port"| M["Prometheus and Grafana (reference environment)"]
 ```
 
 | Element | Holds | Trust boundary |
@@ -35,6 +36,10 @@ flowchart LR
 | Redis | Revoked session ids with a 630 s TTL; rate-limit buckets keyed by policy and HMAC of the subject | Ephemeral; PostgreSQL stays authoritative. When Redis fails, revocation checks fall back to PostgreSQL and rate limits to buckets local to the instance (ADR-007, ADR-014) |
 | Management port | Health, readiness and Prometheus metrics | Plain HTTP, never published outside the deployment network |
 | Key material and TLS keystore | ES256 signing key, AES-256 key ring, HMAC key, server certificate | Environment variables; never in the repository. The `prod-like` profile refuses to start without them |
+| Container image | The application, its dependencies and the entry point; no key material | Built in CI from base images pinned by digest and published with an SBOM and a provenance attestation; runs as the unprivileged user 10001 |
+| `warden-keys` volume | The key file of the reference environment | Written once by the first instance with owner-only permissions and read by every instance; never in the image or the repository |
+| Prometheus and Grafana | Aggregated metrics without user, workspace, session, e-mail or IP labels | Reference environment only; published on `127.0.0.1`; Grafana admits anonymous viewers |
+| CI pipeline and dependency updates | Build, tests, dependency review, licence report, image publication | GitHub Actions on pull requests and on `main`; images pinned by digest and actions by release; Dependabot proposes updates every week |
 
 ## Threats
 
@@ -69,6 +74,7 @@ risk recorded).
 | T-06 | Concurrent demotions or removals leaving a workspace without OWNER | Workspace row locked with `SELECT … FOR UPDATE` and owners counted under the lock (SDD V14-A4) | MUC-05 | REQ-FUNC-039, BR-001, BR-011 | `ConcurrentLastOwnerIT` (50 repetitions), `MemberRemovalIT` | Mitigated |
 | T-07 | A template, or a value inserted into one such as a workspace name, runs logic, includes other content or exposes values beyond the declared variables | Placeholder-only renderer: one regular expression, declared variables per key, any other `{{ }}` construct rejected, values inserted literally and never re-scanned (ADR-016) | — | REQ-SEC-013 | `PlaceholderRendererTest`, `TemplateResolverIT` (every seeded template validates) | Mitigated |
 | T-08 | A link of a revoked, replaced or accepted invitation, or of a deleted workspace, is still delivered | The events cancel the unsent deliveries and drop their tokens; the worker records each result against the state re-read under lock and keeps `CANCELLED`; a dead invitation delivery is retried only while its invitation is pending (ADR-015) | MUC-06 | REQ-FUNC-030, 032, 035, 060, 062 | `DeliveryCancellationIT`, `NotificationCriteriaIT`, `DeliveryWorkerIT`, `WorkspaceDeliveriesIT` | Mitigated (a message already handed to a provider when the cancellation arrives may still be delivered, DRISK-04) |
+| T-09 | A compromised or substituted base image, dependency or action enters the build | Base images and every image of the reference environment pinned by digest; Maven Enforcer bans version ranges and snapshots (FF-08); the `dependency-review` job fails a pull request that adds a dependency with a known vulnerability of high severity or above; Dependabot proposes updates every week for Maven, actions, Docker and Compose; the published image carries an SBOM and a provenance attestation | — | REQ-BUILD-003, REQ-BUILD-004, REQ-BUILD-005 | CI jobs `verify`, `dependency-review` and `image` | Mitigated |
 
 ### Repudiation
 
@@ -98,6 +104,9 @@ risk recorded).
 | I-16 | A link token exposed at rest, in the delivery listing, in a server log or in a provider's URL | Sealed with AES-256-GCM until the send; opened only by the worker; placed only in the URL fragment; dropped on `SENT`, on `CANCELLED` and once expired, whatever the state; the listing carries no subject, body, variables or link (ADR-011) | MUC-06 | REQ-SEC-005, 014, REQ-INT-009, REQ-FUNC-059 | `SecretsAtRestIT`, `DeliveryWorkerIT`, `LinkBuilderTest`, `WorkspaceDeliveriesIT` | Mitigated |
 | I-17 | Personal data in events and stale credentials kept indefinitely | Published events purged after 7 days, unpublished ones never; single-use tokens purged 7 days after expiry; dead sessions with their refresh tokens after 30 days | — | REQ-FUNC-063 | `OutboxRetentionIT`, `IamRetentionIT` | Mitigated |
 | I-18 | An ADMIN lists or retries the deliveries of another workspace, or system-scope deliveries | Both endpoints run in the workspace's tenant context under Row Level Security and are in the isolation registry, so they inherit the foreign and deleted workspace cases and the role matrix; system-scope deliveries have no workspace and are never listed (DEC-004) | MUC-01 | REQ-FUNC-025, 059, 060 | `IsolationSuiteIT`, `RoleMatrixIT`, `WorkspaceDeliveriesIT` | Mitigated |
+| I-19 | Health details or metrics reached from outside the deployment | Management on its own port (8081), not exposed by the image and never published by Compose; the container health check runs inside the container (`HealthProbe`); Prometheus scrapes inside the Compose network | — | REQ-OBS-001 | `HealthProbeTest`; inspection of `Dockerfile` and `compose.yaml` | Mitigated |
+| I-20 | Key material baked into the image, committed, or readable by other users | Keys are neither in the image nor in its build context (`.dockerignore` excludes `.env`, key and keystore files); the reference environment generates them on first start into the `warden-keys` volume, in a directory of mode 700 and a file of mode 600 owned by the runtime user, and keeps an existing file so every instance and restart uses the same keys; elsewhere they come from environment variables (ADR-012) | — | REQ-INST-002 | `KeyFileGeneratorTest` | Mitigated |
+| I-21 | Operational dashboards seen by anyone who reaches Grafana, or Grafana administered with its default password | Reference environment only: published on `127.0.0.1`; anonymous users are Viewers; dashboards show aggregated metrics without identifiers (REQ-OBS-003); the admin password is set in `.env` | — | REQ-OBS-007 | Inspection of `compose.yaml` | Accepted |
 
 ### Denial of service
 
@@ -113,6 +122,8 @@ risk recorded).
 | D-08 | A slow or failing e-mail provider blocks requests or the workers | Requests only write the outbox; the worker gives each call 2 s to connect and 5 s to answer, fails over to the other provider in the same attempt and opens a breaker per provider at 50 % failures over 20 calls (ADR-009) | — | REQ-REL-003, 004, 005, REQ-FUNC-055 | `DeliveryResilienceIT` (both providers down), `ProviderFailoverTest`, `HttpEmailProviderTest` | Mitigated |
 | D-09 | E-mails lost or duplicated by a crash, a restart or a second instance | Deliveries created in the dispatch transaction with a unique key per event, recipient and channel; `SKIP LOCKED` claims with a 30 s lease; all state in PostgreSQL; the delivery id sent as idempotency key (ADR-008, ADR-015) | — | REQ-REL-001, 002, REQ-AVAIL-003, REQ-FUNC-061 | `TwoInstancesIT` (1,000 events, two instances), `DeliveryResilienceIT`, `OutboxDispatcherIT`, `NotificationFanoutIT` | Mitigated (at-least-once towards the provider) |
 | D-10 | A provider that keeps failing makes deliveries retry forever, or the retry endpoint is used to resend at will | 5 attempts with backoff of 1, 2, 4 and 8 s ± 50 %, then `DEAD`; a retry needs an ADMIN, a `DEAD` delivery and, for an invitation, a pending one; every retry is audited | MUC-07 | REQ-FUNC-057, 060, REQ-REL-006, REQ-SEC-015 | `DeliveryWorkerIT`, `BackoffPolicyTest`, `WorkspaceDeliveriesIT`, `AuditCompletenessIT` | Mitigated (retries are not rate limited; each one costs at most 5 attempts) |
+| D-11 | A restart or deployment fails requests in flight, or stops a worker in the middle of a send | Graceful shutdown with up to 30 s per phase; the worker gate closes when shutdown starts, so the workers claim nothing new, and a delivery left unfinished is claimed again when its lease lapses; the JVM runs as PID 1 and receives `SIGTERM` | — | REQ-AVAIL-002, REQ-REL-001 | `GracefulShutdownIT`, `WorkerGateTest` | Mitigated |
+| D-12 | The JVM takes the host's memory, or keeps running in a broken state after running out of it | Heap limited to 60 % of the container memory (`mem_limit: 1g` in the reference environment); `-XX:+ExitOnOutOfMemoryError` ends the process so the platform restarts it | — | — | Inspection of the entry point and `compose.yaml` | Mitigated |
 
 ### Elevation of privilege
 
@@ -127,6 +138,7 @@ risk recorded).
 | E-07 | A new workspace endpoint shipped without isolation coverage | R7: the build fails when a workspace handler is missing from the isolation registry; registered endpoints inherit the foreign and deleted workspace cases and the role matrix | MUC-01 | REQ-MAINT-003 | `WorkspaceEndpointRulesIT`; failing CI shown on PR #18 | Mitigated |
 | E-08 | A failing membership lookup, an unknown stored role or an unresolvable workspace grants access | Fail closed: lookup errors give 503 with `Retry-After`, an unknown role or a malformed workspace id answers the same 404 as a non-member and the unknown role is logged | MUC-01 | REQ-SEC-011 | `FailClosedAuthorizationIT` (each fault on every registered endpoint, as an OWNER), `DependencyOutageIT`, `WorkspaceAuthorizationInterceptorTest` | Mitigated |
 | E-09 | The notification module reads other modules' data or bypasses Row Level Security | `notification` depends only on `shared` and receives everything through events (FF-02); only its worker package may open a system-context transaction (FF-03) | — | REQ-MAINT-002 | `ArchitectureTest` | Mitigated |
+| E-10 | Code running inside the container gains root privileges | The image runs as the unprivileged user 10001 with no login shell and binds no port below 1024 | — | — | Inspection of `Dockerfile` | Mitigated |
 
 ## Residual and accepted risks
 
@@ -146,9 +158,14 @@ risk recorded).
 | — | A send that outlives its lease, or a crash after the provider accepted, sends the message again with the same idempotency key | Accepted (ADR-015): real providers deduplicate by key; the simulators do not |
 | — | Circuit breakers are per instance, so N instances call a failing provider up to N times before every breaker opens | Accepted (ADR-009): small volumes, cheap probes |
 | — | Sessions are purged 30 days after they become unusable, a period the SDD marks as to be confirmed | Accepted for release 1.0; revisited with the operators' needs |
+| — | Grafana in the reference environment admits anonymous viewers and starts with a default admin password (I-21) | Accepted for the local reference environment only; any other deployment must disable anonymous access and set its own password |
+| — | The application files in the image belong to the runtime user, so code running in the container could alter them until the container is recreated (E-10) | Accepted for release 1.0: the image is immutable and a new container restores it; root-owned, read-only application files are a candidate hardening for a later release |
+| — | A vulnerability published after a dependency was merged stays until the next update (T-09) | Accepted: Dependabot proposes updates every week and each release states its open critical vulnerabilities (REQ-BUILD-004) |
 
 ## Open items for the next revision
 
 - I-02: REQ-SEC-010 analysis and calibration of the response floor.
 
 - T-07, R-01: workspace template customization and its `TEMPLATE_CHANGED` audit record arrive with release 1.1 (D-01); the renderer's validation already guards them.
+
+- REQ-PORT-001: the reference environment has been demonstrated on `linux/amd64`; a run on `linux/arm64` is still to be recorded.
