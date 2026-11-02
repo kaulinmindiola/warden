@@ -1,0 +1,21 @@
+meta {
+  name: Delete the workspace
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("answers 204", function () {
+    expect(res.status).to.equal(204);
+  });
+}

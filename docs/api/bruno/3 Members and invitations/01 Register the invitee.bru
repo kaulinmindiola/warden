@@ -1,0 +1,29 @@
+meta {
+  name: Register the invitee
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{inviteeEmail}}",
+    "password": "{{password}}",
+    "locale": "es"
+  }
+}
+
+script:pre-request {
+  bru.setVar("inviteeEmail", "invitee-" + Date.now() + "@mail.test");
+}
+
+tests {
+  test("answers 202", function () {
+    expect(res.status).to.equal(202);
+  });
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Create a note
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/notes
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "title": "Release checklist",
+    "body": "Run the full Bruno collection."
+  }
+}
+
+script:post-response {
+  bru.setVar("noteId", res.body.id);
+  bru.setVar("noteVersion", res.body.version);
+}
+
+tests {
+  test("answers 201", function () {
+    expect(res.status).to.equal(201);
+  });
+}

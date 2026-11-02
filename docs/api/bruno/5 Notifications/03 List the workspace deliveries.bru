@@ -1,0 +1,25 @@
+meta {
+  name: List the workspace deliveries
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/notifications/deliveries
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+script:post-response {
+  bru.setVar("deliveryId", res.body.items.length ? res.body.items[0].id : "");
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

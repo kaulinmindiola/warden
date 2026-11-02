@@ -1,0 +1,29 @@
+meta {
+  name: Register the owner
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{ownerEmail}}",
+    "password": "{{password}}",
+    "locale": "en"
+  }
+}
+
+script:pre-request {
+  bru.setVar("ownerEmail", "owner-" + Date.now() + "@mail.test");
+}
+
+tests {
+  test("answers 202", function () {
+    expect(res.status).to.equal(202);
+  });
+}

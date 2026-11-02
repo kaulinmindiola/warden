@@ -1,0 +1,21 @@
+meta {
+  name: Leave the workspace
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/leave
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{inviteeToken}}
+}
+
+tests {
+  test("answers 204", function () {
+    expect(res.status).to.equal(204);
+  });
+}

@@ -1,0 +1,21 @@
+meta {
+  name: List my workspaces
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/workspaces
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

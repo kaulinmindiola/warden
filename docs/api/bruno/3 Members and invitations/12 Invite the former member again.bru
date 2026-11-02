@@ -1,0 +1,28 @@
+meta {
+  name: Invite the former member again
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/invitations
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "email": "{{inviteeEmail}}",
+    "role": "MEMBER"
+  }
+}
+
+tests {
+  test("answers 201", function () {
+    expect(res.status).to.equal(201);
+  });
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Get my notification preferences
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/me/notification-preferences
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+script:post-response {
+  bru.setVar("preferences", JSON.stringify(res.body.preferences || []));
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

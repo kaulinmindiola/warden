@@ -1,0 +1,27 @@
+meta {
+  name: Promote the member to admin
+  type: http
+  seq: 10
+}
+
+put {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/members/{{inviteeUserId}}/role
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "role": "ADMIN"
+  }
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

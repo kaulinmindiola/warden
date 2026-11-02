@@ -1,0 +1,25 @@
+meta {
+  name: Retry a delivery that was sent
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/workspaces/{{workspaceId}}/notifications/deliveries/{{deliveryId}}/retry
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("answers 409", function () {
+    expect(res.status).to.equal(409);
+  });
+}
+
+docs {
+  Only a DEAD delivery can be retried (202); a sent one answers 409 delivery-not-retryable (REQ-FUNC-060).
+}

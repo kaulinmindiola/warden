@@ -1,0 +1,21 @@
+meta {
+  name: List my sessions
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/auth/sessions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("answers 200", function () {
+    expect(res.status).to.equal(200);
+  });
+}

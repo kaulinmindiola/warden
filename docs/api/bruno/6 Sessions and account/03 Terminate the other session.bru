@@ -1,0 +1,21 @@
+meta {
+  name: Terminate the other session
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/auth/sessions/{{otherSessionId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("answers 204", function () {
+    expect(res.status).to.equal(204);
+  });
+}
