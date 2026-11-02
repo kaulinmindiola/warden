@@ -40,7 +40,7 @@
 		<resilience4j.version>2.4.0</resilience4j.version>
 		<wiremock.version>3.13.2</wiremock.version>
 		<bouncycastle.version>1.86</bouncycastle.version>
-		<springdoc.version>3.1.1</springdoc.version>
+		<springdoc.version>3.2.0</springdoc.version>
 
 		<!-- Build tooling not managed by spring-boot-starter-parent -->
 		<spotless.version>3.10.4</spotless.version>
