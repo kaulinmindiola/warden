@@ -36,7 +36,7 @@
 		<!-- Libraries not managed by spring-boot-starter-parent (pinned by POC-001) -->
 		<spring-modulith.version>2.1.2</spring-modulith.version>
 		<archunit.version>1.5.1</archunit.version>
-		<bucket4j.version>8.21.0</bucket4j.version>
+		<bucket4j.version>8.22.0</bucket4j.version>
 		<resilience4j.version>2.4.0</resilience4j.version>
 		<wiremock.version>3.13.2</wiremock.version>
 		<bouncycastle.version>1.86</bouncycastle.version>
