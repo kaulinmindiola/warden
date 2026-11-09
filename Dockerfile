@@ -9,7 +9,7 @@
 # Every image is pinned by digest, the syntax image included (REQ-BUILD-003).
 
 # ---- Build: compile and package with the Maven wrapper (tests run in CI, not here) ----
-FROM eclipse-temurin:21-jdk-noble@sha256:114cabb73033ca4ce7ceec3deb62396bc1b716282bae051ed3c1d82e38fcab2d AS build
+FROM eclipse-temurin:25-jdk-noble@sha256:95e350ad1eb738f943e141640f7e3d797e483359a3b33c3864255bfd1ad71f8a AS build
 WORKDIR /workspace
 
 COPY .mvn/ .mvn/
@@ -21,7 +21,7 @@ RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -ntp -Dmaven.test.skip=true -D
     && java -Djarmode=tools -jar app.jar extract --layers --launcher --destination extracted
 
 # ---- Runtime: JRE only, non-root, layers from the least to the most frequently changed ----
-FROM eclipse-temurin:21-jre-noble@sha256:0eda5830ed7b669abc246a8dc520ea8a23cab06f9a8d4b6964109e2f2394e46f AS runtime
+FROM eclipse-temurin:25-jre-noble@sha256:a98128a57de944a72bd31fbc79b898edd5a5864d3652071d5bbd2160ab7d7dce AS runtime
 
 # The key directory belongs to the runtime user, so a volume mounted on it is writable when the
 # entry point generates the key file of the reference environment.
