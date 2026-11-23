@@ -78,7 +78,7 @@ services:
         condition: service_healthy
 
   postgres:
-    image: postgres:17@sha256:3b0cda93be7c8dba2ed484d19393d93845dc3dafb88973e248ba8e6d99d784e1
+    image: postgres:19@sha256:bb6e70add742cd868fb62cb3b2f67d1dd2bdd2b65a521e778420748753687c60
     environment:
       POSTGRES_DB: warden
       POSTGRES_USER: postgres
